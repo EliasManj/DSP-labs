@@ -73,6 +73,11 @@ void ADC3_CH12_DMA_Config(void);
  * @param  None
  * @retval None
  */
+
+int32_t FIR(int16_t adc){
+	return (((int32_t)adc) - BIT12_OFFSET) + temp0[0] + temp0[1] + temp0[2] + temp0[3];
+}
+
 int main(void) {
 	/*!< At this stage the microcontroller clock setting is already configured,
 	 this is done through SystemInit() function which is called from startup
@@ -126,7 +131,7 @@ int main(void) {
 						temp0[i] = temp0[i] - BIT12_OFFSET;
 					}
 					//FIR Filter
-					temp_output = (((int32_t)buffADC_0[index_t]) - BIT12_OFFSET) + temp0[0] + temp0[1] + temp0[2] + temp0[3];
+					temp_output = FIR(buffADC_0[index_t]);
 					 //Add offset
 					buffDAC_0[index_t] = (uint32_t)(temp_output + BIT12_OFFSET);
 				}
@@ -146,7 +151,7 @@ int main(void) {
 						temp0[i] = temp0[i] - BIT12_OFFSET;
 					}
 					//FIR Filter
-					temp_output = (((int32_t)buffADC_1[index_t]) - BIT12_OFFSET) + temp0[0] + temp0[1] + temp0[2] + temp0[3];
+					temp_output = FIR(buffADC_1[index_t]);
 					 //Add offset
 					buffDAC_1[index_t] = (uint32_t)(temp_output + BIT12_OFFSET);
 				}
