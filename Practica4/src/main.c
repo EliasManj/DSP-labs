@@ -49,7 +49,7 @@ volatile uint16_t buffADC_1[BUFFER_SIZE]; //Array for ADC samples
 volatile uint16_t buffDAC_0[BUFFER_SIZE]; //Array for DAC samples
 volatile uint16_t buffDAC_1[BUFFER_SIZE]; //Array for DAC samples
 volatile int32_t temp0[N_COEFS];
-volatile int32_t temp_output;
+volatile int32_t temp_outputDAC;
 
 uint16_t Sine12bit[32] = { 2047, 2447, 2831, 3185, 3498, 3750, 3939, 4056, 4095,
 		4056, 3939, 3750, 3495, 3185, 2831, 2447, 2047, 1647, 1263, 909, 599,
@@ -131,9 +131,9 @@ int main(void) {
 						temp0[i] = temp0[i] - BIT12_OFFSET;
 					}
 					//FIR Filter
-					temp_output = FIR(buffADC_0[index_t]);
+					temp_outputDAC = FIR(buffADC_0[index_t]);
 					 //Add offset
-					buffDAC_0[index_t] = (uint32_t)(temp_output + BIT12_OFFSET);
+					buffDAC_0[index_t] = (uint32_t)(temp_outputDAC + BIT12_OFFSET);
 				}
 			} else {
 				for (index_t = 0; index_t < BUFFER_SIZE; index_t++) {
@@ -151,9 +151,9 @@ int main(void) {
 						temp0[i] = temp0[i] - BIT12_OFFSET;
 					}
 					//FIR Filter
-					temp_output = FIR(buffADC_1[index_t]);
+					temp_outputDAC = FIR(buffADC_1[index_t]);
 					 //Add offset
-					buffDAC_1[index_t] = (uint32_t)(temp_output + BIT12_OFFSET);
+					buffDAC_1[index_t] = (uint32_t)(temp_outputDAC + BIT12_OFFSET);
 				}
 			}
 
