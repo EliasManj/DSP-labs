@@ -48,12 +48,14 @@ volatile uint16_t buffADC_0[BUFFER_SIZE]; //Array for ADC samples
 volatile uint16_t buffADC_1[BUFFER_SIZE]; //Array for ADC samples
 volatile uint16_t buffDAC_0[BUFFER_SIZE]; //Array for DAC samples
 volatile uint16_t buffDAC_1[BUFFER_SIZE]; //Array for DAC samples
-volatile int32_t temp0[N_COEFS];
-volatile int32_t temp_output;
+volatile int16_t temp0[N_COEFS];
+volatile int16_t temp_output;
 
 uint16_t Sine12bit[32] = { 2047, 2447, 2831, 3185, 3498, 3750, 3939, 4056, 4095,
 		4056, 3939, 3750, 3495, 3185, 2831, 2447, 2047, 1647, 1263, 909, 599,
 		344, 155, 38, 0, 38, 155, 344, 599, 909, 1263, 1647 };
+int16_t coefficients[N_COEFS] = {4,4,4,4};
+
 volatile int32_t memory;
 volatile int32_t mem_delay;
 volatile int32_t index_t;
@@ -126,19 +128,19 @@ int main(void) {
 						temp0[i] = temp0[i] - BIT12_OFFSET;
 					}
 					//FIR Filter
-					temp_output = (((int32_t)buffADC_0[index_t]) - BIT12_OFFSET) + temp0[0] + temp0[1] + temp0[2] + temp0[3];
+					temp_output = (((int16_t)buffADC_0[index_t]) - BIT12_OFFSET) + coefficients[0]*temp0[0] + coefficients[1]*temp0[1] + coefficients[2]*temp0[2] + coefficients[3]*temp0[3];
 					 //Add offset
-					buffDAC_0[index_t] = (uint32_t)(temp_output + BIT12_OFFSET);
+					buffDAC_0[index_t] = (uint16_t)(temp_output + BIT12_OFFSET);
 				}
 			} else {
 				for (index_t = 0; index_t < BUFFER_SIZE; index_t++) {
 					for (i = 0; i < N_COEFS; i++) {
 						index_t_delay = index_t - i;
 						if (index_t_delay > 0) {
-							temp0[i] = (int32_t)buffADC_1[index_t_delay];
+							temp0[i] = (int16_t)buffADC_1[index_t_delay];
 						} else {
 							index_t_delay = BUFFER_SIZE + index_t_delay;
-							temp0[i] = (int32_t)buffADC_0[index_t_delay];
+							temp0[i] = (int16_t)buffADC_0[index_t_delay];
 						}
 					}
 					//Substract offset 
@@ -146,9 +148,9 @@ int main(void) {
 						temp0[i] = temp0[i] - BIT12_OFFSET;
 					}
 					//FIR Filter
-					temp_output = (((int32_t)buffADC_1[index_t]) - BIT12_OFFSET) + temp0[0] + temp0[1] + temp0[2] + temp0[3];
+					temp_output = (((int16_t)buffADC_1[index_t]) - BIT12_OFFSET) + coefficients[0]*temp0[0] + coefficients[1]*temp0[1] + coefficients[2]*temp0[2] + coefficients[3]*temp0[3];
 					 //Add offset
-					buffDAC_1[index_t] = (uint32_t)(temp_output + BIT12_OFFSET);
+					buffDAC_1[index_t] = (uint16_t)(temp_output + BIT12_OFFSET);
 				}
 			}
 
