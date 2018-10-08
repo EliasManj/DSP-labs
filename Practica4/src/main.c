@@ -49,7 +49,7 @@ volatile uint16_t buffADC_1[BUFFER_SIZE]; //Array for ADC samples
 volatile uint16_t buffDAC_0[BUFFER_SIZE]; //Array for DAC samples
 volatile uint16_t buffDAC_1[BUFFER_SIZE]; //Array for DAC samples
 volatile int16_t temp0[N_COEFS];
-volatile int16_t temp_output;
+volatile int16_t temp_outputDAC;
 
 uint16_t Sine12bit[32] = { 2047, 2447, 2831, 3185, 3498, 3750, 3939, 4056, 4095,
 		4056, 3939, 3750, 3495, 3185, 2831, 2447, 2047, 1647, 1263, 909, 599,
