@@ -39,6 +39,7 @@
 #define delay_10ms 			480
 #define delay_4ms 			192
 #define offset_2mv			248
+/* FIR */
 #define N_COEFS				10
 #define BIT12_OFFSET		2048
 /* Private macro -------------------------------------------------------------*/
@@ -48,13 +49,12 @@ volatile uint16_t buffADC_0[BUFFER_SIZE]; //Array for ADC samples
 volatile uint16_t buffADC_1[BUFFER_SIZE]; //Array for ADC samples
 volatile uint16_t buffDAC_0[BUFFER_SIZE]; //Array for DAC samples
 volatile uint16_t buffDAC_1[BUFFER_SIZE]; //Array for DAC samples
-volatile int16_t temp0[N_COEFS];
+volatile int16_t temp[N_COEFS];
 volatile int16_t temp_outputDAC;
+/*Variables for IIR*/
 
-uint16_t Sine12bit[32] = { 2047, 2447, 2831, 3185, 3498, 3750, 3939, 4056, 4095,
-		4056, 3939, 3750, 3495, 3185, 2831, 2447, 2047, 1647, 1263, 909, 599,
-		344, 155, 38, 0, 38, 155, 344, 599, 909, 1263, 1647 };
-int16_t coefficients[N_COEFS] = {4,4,4,4};
+/*Variables for FIR*/
+int16_t coefficients[N_COEFS] = { 1,1,1,1,1,1,1,1,1,1 };
 
 volatile int32_t memory;
 volatile int32_t mem_delay;
@@ -62,12 +62,17 @@ volatile int32_t index_t;
 volatile int32_t index_t_delay;
 volatile int32_t interrupt;
 int i;
+
+uint16_t Sine12bit[32] = { 2047, 2447, 2831, 3185, 3498, 3750, 3939, 4056, 4095,
+		4056, 3939, 3750, 3495, 3185, 2831, 2447, 2047, 1647, 1263, 909, 599,
+		344, 155, 38, 0, 38, 155, 344, 599, 909, 1263, 1647 };
 uint32_t flag;
 /* Private function prototypes -----------------------------------------------*/
 void TIM2_Config(void);
 void DAC_Ch2_SineWaveConfig(void);
 void ADC3_CH12_DMA_Config(void);
-
+void fir_wrap(void);
+int32_t FIR(uint16_t adc);
 /* Private functions ---------------------------------------------------------*/
 
 /**
@@ -76,8 +81,60 @@ void ADC3_CH12_DMA_Config(void);
  * @retval None
  */
 
-int32_t FIR(int16_t adc){
-	return (((int32_t)adc) - BIT12_OFFSET) + temp0[0] + temp0[1] + temp0[2] + temp0[3];
+void fir_wrap(void) {
+	if (memory) {
+		for (index_t = 0; index_t < BUFFER_SIZE; index_t++) {
+			for (i = 0; i < N_COEFS; i++) {
+				index_t_delay = index_t - i - 1;
+				if (index_t_delay >= 0) {
+					temp[i] = (int16_t) (buffADC_0[index_t_delay]-BIT12_OFFSET);
+				} else {
+					index_t_delay = BUFFER_SIZE + index_t_delay;
+					temp[i] = (int16_t) (buffADC_1[index_t_delay]-BIT12_OFFSET);
+				}
+			}
+			//FIR Filter
+			temp_outputDAC = FIR(buffADC_0[index_t]);
+			//Add offset
+			buffDAC_0[index_t] = (uint16_t) (temp_outputDAC + BIT12_OFFSET);
+		}
+	} else {
+		for (index_t = 0; index_t < BUFFER_SIZE; index_t++) {
+			for (i = 0; i < N_COEFS; i++) {
+				index_t_delay = index_t - i - 1;
+				if (index_t_delay >= 0) {
+					temp[i] = (int16_t) (buffADC_1[index_t_delay]-BIT12_OFFSET);
+				} else {
+					index_t_delay = BUFFER_SIZE + index_t_delay;
+					temp[i] = (int16_t) (buffADC_0[index_t_delay]-BIT12_OFFSET);
+				}
+			}
+			//FIR Filter
+			temp_outputDAC = FIR(buffADC_1[index_t]);
+			//Add offset
+			buffDAC_1[index_t] = (uint16_t) (temp_outputDAC + BIT12_OFFSET);
+		}
+	}
+}
+
+void iir_wrap(void) {
+	if (memory) {
+		for (index_t = 0; index_t < BUFFER_SIZE; index_t++) {
+			for (i = 0; i < N_COEFS; i++) {
+
+			}
+		}
+	} else {
+		for (index_t = 0; index_t < BUFFER_SIZE; index_t++) {
+			for (i = 0; i < N_COEFS; i++) {
+
+			}
+		}
+	}
+}
+
+int32_t FIR(uint16_t adc) {
+	return ((int16_t) (adc - BIT12_OFFSET)) + coefficients[0]*temp[0] + coefficients[1]*temp[1] + coefficients[2]*temp[2] + coefficients[3]*temp[3] + coefficients[4]*temp[4] + coefficients[5]*temp[5] + coefficients[6]*temp[6] + coefficients[7]*temp[7] + coefficients[8]*temp[8] + coefficients[9]*temp[9];
 }
 
 int main(void) {
@@ -117,61 +174,10 @@ int main(void) {
 	while (1) {
 		if (interrupt == 1) {
 			interrupt = 0;
-			if (memory) {
-				for (index_t = 0; index_t < BUFFER_SIZE; index_t++) {
-					for (i = 0; i < N_COEFS; i++) {
-						index_t_delay = index_t - i;
-						if (index_t_delay > 0) {
-							temp0[i] = (int32_t)buffADC_0[index_t_delay];
-						} else {
-							index_t_delay = BUFFER_SIZE + index_t_delay;
-							temp0[i] = (int32_t)buffADC_1[index_t_delay];
-						}
-					}
-					//Substract offset 
-					for(i = 0; i < BUFFER_SIZE; i++){
-						temp0[i] = temp0[i] - BIT12_OFFSET;
-					}
-					//FIR Filter
-					temp_outputDAC = FIR(buffADC_0[index_t]);
-					 //Add offset
-					buffDAC_0[index_t] = (uint32_t)(temp_outputDAC + BIT12_OFFSET);
-				}
-			} else {
-				for (index_t = 0; index_t < BUFFER_SIZE; index_t++) {
-					for (i = 0; i < N_COEFS; i++) {
-						index_t_delay = index_t - i;
-						if (index_t_delay > 0) {
-							temp0[i] = (int16_t)buffADC_1[index_t_delay];
-						} else {
-							index_t_delay = BUFFER_SIZE + index_t_delay;
-							temp0[i] = (int16_t)buffADC_0[index_t_delay];
-						}
-					}
-					//Substract offset 
-					for(i = 0; i < BUFFER_SIZE; i++){
-						temp0[i] = temp0[i] - BIT12_OFFSET;
-					}
-					//FIR Filter
-					temp_outputDAC = FIR(buffADC_1[index_t]);
-					 //Add offset
-					buffDAC_1[index_t] = (uint32_t)(temp_outputDAC + BIT12_OFFSET);
-				}
-			}
-
+			fir_wrap();
 		}
 	};
 }
-
-/*
- * //(uint32_t)248 son .2 v porque 3.3 es la amplitud dek DAC y toma 2^12 muesstras por ciclo, entonces .2 entre esto da
- //248 unidades = .2 V
- +0.2
- buffDAC_0[index_t] = buffADC_0[index_t]+(uint32_t)248;
- buffDAC_1[index_t] = buffADC_1[index_t]+(uint32_t)248;
- Delay
-
- * */
 
 /**
  * @brief  TIM6 Configuration
