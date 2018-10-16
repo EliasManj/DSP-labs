@@ -49,19 +49,24 @@ volatile uint16_t buffADC_0[BUFFER_SIZE]; //Array for ADC samples
 volatile uint16_t buffADC_1[BUFFER_SIZE]; //Array for ADC samples
 volatile uint16_t buffDAC_0[BUFFER_SIZE]; //Array for DAC samples
 volatile uint16_t buffDAC_1[BUFFER_SIZE]; //Array for DAC samples
-volatile int16_t temp[N_COEFS];
-volatile int16_t temp_outputDAC;
-/*Variables for IIR*/
+volatile int16_t fir_temp[N_COEFS];
+volatile int16_t fir_temp_outputDAC;
 
+/*Variables for IIR*/
+volatile int16_t iir_temp[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+//int16_t iir_coefficients[N_COEFS] = { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 };
+int16_t iir_coefficients[N_COEFS] = { -0, -0,  0, -0, -0, -0, -0, -0, -0, 0};
 /*Variables for FIR*/
-int16_t coefficients[N_COEFS] = { 1,1,1,1,1,1,1,1,1,1 };
+int16_t fir_coefficients[N_COEFS] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+int16_t iir_result;
 
 volatile int32_t memory;
+volatile int32_t probe;
 volatile int32_t mem_delay;
 volatile int32_t index_t;
 volatile int32_t index_t_delay;
 volatile int32_t interrupt;
-int i;
+int32_t i;
 
 uint16_t Sine12bit[32] = { 2047, 2447, 2831, 3185, 3498, 3750, 3939, 4056, 4095,
 		4056, 3939, 3750, 3495, 3185, 2831, 2447, 2047, 1647, 1263, 909, 599,
@@ -72,7 +77,9 @@ void TIM2_Config(void);
 void DAC_Ch2_SineWaveConfig(void);
 void ADC3_CH12_DMA_Config(void);
 void fir_wrap(void);
-int32_t FIR(uint16_t adc);
+int32_t FIR(void);
+int32_t IIR(void);
+void shift_iir(int16_t xn);
 /* Private functions ---------------------------------------------------------*/
 
 /**
@@ -84,35 +91,42 @@ int32_t FIR(uint16_t adc);
 void fir_wrap(void) {
 	if (memory) {
 		for (index_t = 0; index_t < BUFFER_SIZE; index_t++) {
+			if (index_t == 1022) {
+				probe = 0;
+			}
 			for (i = 0; i < N_COEFS; i++) {
-				index_t_delay = index_t - i - 1;
-				if (index_t_delay >= 0) {
-					temp[i] = (int16_t) (buffADC_0[index_t_delay]-BIT12_OFFSET);
-				} else {
+				index_t_delay = index_t - i;
+				if (index_t_delay < 0) {
 					index_t_delay = BUFFER_SIZE + index_t_delay;
-					temp[i] = (int16_t) (buffADC_1[index_t_delay]-BIT12_OFFSET);
+					fir_temp[i] = (int16_t) (buffADC_1[index_t_delay]
+							- BIT12_OFFSET);
+				} else {
+					fir_temp[i] = (int16_t) (buffADC_0[index_t_delay]
+							- BIT12_OFFSET);
 				}
 			}
 			//FIR Filter
-			temp_outputDAC = FIR(buffADC_0[index_t]);
+			fir_temp_outputDAC = FIR();
 			//Add offset
-			buffDAC_0[index_t] = (uint16_t) (temp_outputDAC + BIT12_OFFSET);
+			buffDAC_0[index_t] = (uint16_t) (fir_temp_outputDAC + BIT12_OFFSET);
 		}
 	} else {
 		for (index_t = 0; index_t < BUFFER_SIZE; index_t++) {
 			for (i = 0; i < N_COEFS; i++) {
-				index_t_delay = index_t - i - 1;
-				if (index_t_delay >= 0) {
-					temp[i] = (int16_t) (buffADC_1[index_t_delay]-BIT12_OFFSET);
-				} else {
+				index_t_delay = index_t - i;
+				if (index_t_delay < 0) {
 					index_t_delay = BUFFER_SIZE + index_t_delay;
-					temp[i] = (int16_t) (buffADC_0[index_t_delay]-BIT12_OFFSET);
+					fir_temp[i] = (int16_t) (buffADC_0[index_t_delay]
+							- BIT12_OFFSET);
+				} else {
+					fir_temp[i] = (int16_t) (buffADC_1[index_t_delay]
+							- BIT12_OFFSET);
 				}
 			}
 			//FIR Filter
-			temp_outputDAC = FIR(buffADC_1[index_t]);
+			fir_temp_outputDAC = FIR();
 			//Add offset
-			buffDAC_1[index_t] = (uint16_t) (temp_outputDAC + BIT12_OFFSET);
+			buffDAC_1[index_t] = (uint16_t) (fir_temp_outputDAC + BIT12_OFFSET);
 		}
 	}
 }
@@ -120,21 +134,51 @@ void fir_wrap(void) {
 void iir_wrap(void) {
 	if (memory) {
 		for (index_t = 0; index_t < BUFFER_SIZE; index_t++) {
-			for (i = 0; i < N_COEFS; i++) {
-
+			if(index_t == 1022){
+				probe = 0;
 			}
+			shift_iir((int16_t) (buffADC_0[index_t] - BIT12_OFFSET));
+			iir_result = IIR();
+			iir_temp[0] = iir_result;
+			buffDAC_0[index_t] = (uint16_t) (iir_result + BIT12_OFFSET);
 		}
 	} else {
 		for (index_t = 0; index_t < BUFFER_SIZE; index_t++) {
-			for (i = 0; i < N_COEFS; i++) {
-
-			}
+			shift_iir((int16_t) (buffADC_1[index_t] - BIT12_OFFSET));
+			iir_result = IIR();
+			iir_temp[0] = iir_result;
+			buffDAC_1[index_t] = (uint16_t) (iir_result + BIT12_OFFSET);;
 		}
 	}
 }
 
-int32_t FIR(uint16_t adc) {
-	return ((int16_t) (adc - BIT12_OFFSET)) + coefficients[0]*temp[0] + coefficients[1]*temp[1] + coefficients[2]*temp[2] + coefficients[3]*temp[3] + coefficients[4]*temp[4] + coefficients[5]*temp[5] + coefficients[6]*temp[6] + coefficients[7]*temp[7] + coefficients[8]*temp[8] + coefficients[9]*temp[9];
+int32_t FIR(void) {
+	return fir_coefficients[0] * fir_temp[0] + fir_coefficients[1] * fir_temp[1]
+			+ fir_coefficients[2] * fir_temp[2] + fir_coefficients[3] * fir_temp[3]
+			+ fir_coefficients[4] * fir_temp[4] + fir_coefficients[5] * fir_temp[5]
+			+ fir_coefficients[6] * fir_temp[6] + fir_coefficients[7] * fir_temp[7]
+			+ fir_coefficients[8] * fir_temp[8] + fir_coefficients[9] * fir_temp[9];
+}
+
+int32_t IIR(void) {
+	return fir_coefficients[0] * iir_temp[0] + iir_coefficients[1] * iir_temp[1]
+			+ iir_coefficients[2] * iir_temp[2] + iir_coefficients[3] * iir_temp[3]
+			+ iir_coefficients[4] * iir_temp[4] + iir_coefficients[5] * iir_temp[5]
+			+ iir_coefficients[6] * iir_temp[6] + iir_coefficients[7] * iir_temp[7]
+			+ iir_coefficients[8] * iir_temp[8] + iir_coefficients[9] * iir_temp[9];
+}
+
+void shift_iir(int16_t xn) {
+	iir_temp[9] = iir_temp[8];
+	iir_temp[8] = iir_temp[7];
+	iir_temp[7] = iir_temp[6];
+	iir_temp[6] = iir_temp[5];
+	iir_temp[5] = iir_temp[4];
+	iir_temp[4] = iir_temp[3];
+	iir_temp[3] = iir_temp[2];
+	iir_temp[2] = iir_temp[1];
+	iir_temp[1] = iir_temp[0];
+	iir_temp[0] = xn;
 }
 
 int main(void) {
@@ -174,7 +218,7 @@ int main(void) {
 	while (1) {
 		if (interrupt == 1) {
 			interrupt = 0;
-			fir_wrap();
+			iir_wrap();
 		}
 	};
 }
