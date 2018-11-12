@@ -6,7 +6,8 @@
 #include "stm32f4xx_conf.h"
 #include "arm_math.h"
 #include "Coefficients.h"
-
+#include "coefs_right.h"
+#include "coefs_left.h"
 
 /** @addtogroup STM32F4_Discovery_Peripheral_Examples
   * @{
@@ -35,11 +36,20 @@ extern const uint32_t B[51];
 extern const uint16_t BL;
 //const uint16_t numTaps=5;
 //const q31_t pCoeffs[5]={6000,6000,6000,6000,6000};
+
+/* HRTF coefficients array of pointers */
+float32_t *left_coefs[18];
+float32_t *right_coefs[18];
+int32_t adc_pot_value;
+
 /* Private function prototypes -----------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
 void ADC3_CH12_DMA_Config(void);
 void DAC_Ch2_Config(void);
 void Tim_Config(void);
+void Coefficients_Config(void);
+int32_t Map_ADC_Pot_Angle(int32_t pot_val);
+int32_t Map_Angle_To_Index(int32_t angle);
 /**
   * @brief  Main program
   * @param  None
@@ -66,7 +76,7 @@ int main(void)
   ADC_DMACmd(ADC3, ENABLE);
   DAC_DMACmd(DAC_Channel_2, ENABLE);
 
-
+  /* Main program */
   arm_fir_init_q31 (&S, BL, (q31_t *)&B, (q31_t *)&pState, (uint32_t)BUFFER_SIZE);
   while (1)
   {
@@ -243,6 +253,59 @@ void DAC_Ch2_Config(void)
   /* Enable DMA1_Stream5 */
   DMA_Cmd(DMA1_Stream6, ENABLE);
 
+}
+
+void Coefficients_Config(void){
+	  /* Create array of pointers for left coefficients */
+	  left_coefs[0] = &left_coeffs_00[0];
+	  left_coefs[1] = &left_coeffs_10[0];
+	  left_coefs[2] = &left_coeffs_20[0];
+	  left_coefs[3] = &left_coeffs_30[0];
+	  left_coefs[4] = &left_coeffs_40[0];
+	  left_coefs[5] = &left_coeffs_50[0];
+	  left_coefs[6] = &left_coeffs_60[0];
+	  left_coefs[7] = &left_coeffs_70[0];
+	  left_coefs[8] = &left_coeffs_80[0];
+	  left_coefs[9] = &left_coeffs_90[0];
+	  left_coefs[11] = &left_coeffs_100[0];
+	  left_coefs[12] = &left_coeffs_110[0];
+	  left_coefs[13] = &left_coeffs_120[0];
+	  left_coefs[14] = &left_coeffs_130[0];
+	  left_coefs[15] = &left_coeffs_140[0];
+	  left_coefs[16] = &left_coeffs_150[0];
+	  left_coefs[17] = &left_coeffs_160[0];
+	  left_coefs[18] = &left_coeffs_170[0];
+
+	  /* Create array of pointers for right coefficients */
+	  right_coefs[0] = &right_coeffs_00[0];
+	  right_coefs[1] = &right_coeffs_10[0];
+	  right_coefs[2] = &right_coeffs_20[0];
+	  right_coefs[3] = &right_coeffs_30[0];
+	  right_coefs[4] = &right_coeffs_40[0];
+	  right_coefs[5] = &right_coeffs_50[0];
+	  right_coefs[6] = &right_coeffs_60[0];
+	  right_coefs[7] = &right_coeffs_70[0];
+	  right_coefs[8] = &right_coeffs_80[0];
+	  right_coefs[9] = &right_coeffs_90[0];
+	  right_coefs[10] = &right_coeffs_100[0];
+	  right_coefs[11] = &right_coeffs_110[0];
+	  right_coefs[12] = &right_coeffs_120[0];
+	  right_coefs[13] = &right_coeffs_130[0];
+	  right_coefs[14] = &right_coeffs_140[0];
+	  right_coefs[15] = &right_coeffs_150[0];
+	  right_coefs[16] = &right_coeffs_160[0];
+	  right_coefs[17] = &right_coeffs_170[0];
+	  right_coefs[18] = &right_coeffs_180[0];
+}
+
+int32_t Map_ADC_Pot_Angle(int32_t pot_val){
+	/* Maps 0-255 to 0 360 for angles*/
+	return 0;
+}
+
+int32_t Map_Angle_To_Index(int32_t angle){
+	/* Maps 0-360 to 0 18 for angles, also switches a value when angle>180 */
+	return 0;
 }
 
 #ifdef  USE_FULL_ASSERT
