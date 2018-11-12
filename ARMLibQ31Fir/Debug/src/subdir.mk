@@ -27,7 +27,7 @@ src/%.o: ../src/%.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: MCU GCC Compiler'
 	@echo $(PWD)
-	arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -DSTM32F407VGTx -DARM_MATH_CM4 -D__FPU_PRESENT -D__FPU_USED -DSTM32F4 -DSTM32F4DISCOVERY -DSTM32 -DDEBUG -DUSE_STDPERIPH_DRIVER -DSTM32F40XX -DSTM32F40_41xxx -I"C:/Users/Elias g/Downloads/ARMLibQ31Fir/inc" -I"C:/Users/Elias g/Downloads/ARMLibQ31Fir/CMSIS/core" -I"C:/Users/Elias g/Downloads/ARMLibQ31Fir/CMSIS/device" -I"C:/Users/Elias g/Downloads/ARMLibQ31Fir/StdPeriph_Driver/inc" -I"C:/Users/Elias g/Downloads/ARMLibQ31Fir/Utilities" -O0 -g3 -Wall -fmessage-length=0 -ffunction-sections -c -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" -o "$@" "$<"
+	arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -DSTM32F407VGTx -DARM_MATH_CM4 -D__FPU_PRESENT -D__FPU_USED -DSTM32F4 -DSTM32F4DISCOVERY -DSTM32 -DDEBUG -DUSE_STDPERIPH_DRIVER -DSTM32F40XX -DSTM32F40_41xxx -I"C:/Users/Elias g/stm32/ARMLibQ31Fir/inc" -I"C:/Users/Elias g/stm32/ARMLibQ31Fir/CMSIS/core" -I"C:/Users/Elias g/stm32/ARMLibQ31Fir/CMSIS/device" -I"C:/Users/Elias g/stm32/ARMLibQ31Fir/StdPeriph_Driver/inc" -I"C:/Users/Elias g/stm32/ARMLibQ31Fir/Utilities" -O0 -g3 -Wall -fmessage-length=0 -ffunction-sections -c -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 

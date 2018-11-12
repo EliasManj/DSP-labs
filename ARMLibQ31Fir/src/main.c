@@ -29,8 +29,8 @@ __IO uint8_t CurrMem = 0;
 __IO uint8_t InUseMem = 0;
 __IO uint8_t ADCNewBlock = 0;
 __IO uint8_t DACReady = 0;
-extern const uint32_t B[51];
-extern const uint16_t BL;
+extern const real32_T B[3];
+extern const int BL;
 //const uint16_t numTaps=5;
 //const q31_t pCoeffs[5]={6000,6000,6000,6000,6000};
 /* Private function prototypes -----------------------------------------------*/
@@ -48,11 +48,11 @@ int main(void) {
 
 	uint16_t i;
 
-	q31_t TempIn[BUFFER_SIZE];
-	q31_t pState[BUFFER_SIZE + BL - 1];
-	q31_t TempOut[BUFFER_SIZE];
+	float32_t TempIn[BUFFER_SIZE];
+	float32_t pState[BUFFER_SIZE + BL - 1];
+	q15_t TempOut[BUFFER_SIZE];
 	q15_t Temp[BUFFER_SIZE];
-	static arm_fir_instance_q31 S;
+	static arm_fir_instance_f32 S;
 	//Configure Tim2 ADC3 And DAC2 with DMAs, DAC1 Probe signal
 	Tim_Config();
 	ADC3_CH12_DMA_Config();
@@ -63,7 +63,7 @@ int main(void) {
 	ADC_DMACmd(ADC3, ENABLE);
 	DAC_DMACmd(DAC_Channel_2, ENABLE);
 
-	arm_fir_init_q31(&S, BL, (q31_t *) &B, (q31_t *) &pState,
+	arm_fir_init_f32(&S, BL, (float32_t *) &B, (float32_t *) &pState,
 			(uint32_t) BUFFER_SIZE);
 	while (1) {
 		while (!ADCNewBlock)
@@ -75,18 +75,18 @@ int main(void) {
 			Temp[i] = (q15_t) (ADCMem[i + (CurrMem << BUFFERAddreLeng)] - 2048);
 
 		}
-		//Q15 -> Q31
-		arm_q15_to_q31((q15_t *) &Temp, (q31_t *) &TempIn,
+		//Q15 -> f32
+		arm_q15_to_float((q15_t *) &Temp, (float32_t *) &TempIn,
 				(uint32_t) BUFFER_SIZE);
 
-		//Simple FIR q31
-		arm_fir_q31(&S, (q31_t *) &TempIn, (q31_t *) &TempOut,
+		//Simple FIR f32
+		arm_fir_f32(&S, (float32_t *) &TempIn, (float32_t *) &TempOut,
 				(uint32_t) BUFFER_SIZE);
-		arm_scale_q31((q31_t *) &TempOut, (q31_t) 0x5FFFFFFF, (int8_t) 1,
-				(q31_t *) &TempIn, (uint32_t) BUFFER_SIZE);
+		//arm_scale_f32((float32_t *) &TempOut, (float32_t) 0x5FFFFFFF,
+//				(float32_t *) &TempIn, (uint32_t) BUFFER_SIZE);
 
-		//Q31 -> Q15
-		arm_q31_to_q15((q31_t *) &TempIn, (q15_t *) &Temp,
+		//f32 -> q15
+		arm_float_to_q15((float32_t *) &TempOut, (q15_t *) &Temp,
 				(uint32_t) BUFFER_SIZE);
 		//Q15 -> uint16_12 with 12 bit DAC
 		for (i = 0; i < BUFFER_SIZE; i++) {

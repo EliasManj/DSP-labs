@@ -29,13 +29,13 @@ endif
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # All Target
-all: ARMLibTest.elf
+all: ARMLibQ31Fir.elf
 
 # Tool invocations
-ARMLibTest.elf: $(OBJS) $(USER_OBJS) C:\Users\Elias\ g\Downloads\ARMLibQ31Fir/LinkerScript.ld
+ARMLibQ31Fir.elf: $(OBJS) $(USER_OBJS) C:\Users\Elias\ g\stm32\ARMLibQ31Fir/LinkerScript.ld
 	@echo 'Building target: $@'
 	@echo 'Invoking: MCU GCC Linker'
-	arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -L"C:\Users\Elias g\Downloads\ARMLibQ31Fir\Lib" -T"C:/Users/Elias g/Downloads/ARMLibQ31Fir/LinkerScript.ld" -Wl,-Map=output.map -Wl,--gc-sections -o "ARMLibTest.elf" @"objects.list" $(USER_OBJS) $(LIBS) -lm
+	arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -L"C:\Users\Elias g\stm32\ARMLibQ31Fir\Lib" -T"C:/Users/Elias g/stm32/ARMLibQ31Fir/LinkerScript.ld" -Wl,-Map=output.map -Wl,--gc-sections -o "ARMLibQ31Fir.elf" @"objects.list" $(USER_OBJS) $(LIBS) -lm
 	@echo 'Finished building target: $@'
 	@echo ' '
 	$(MAKE) --no-print-directory post-build
@@ -47,8 +47,8 @@ clean:
 
 post-build:
 	-@echo 'Generating binary and Printing size information:'
-	arm-none-eabi-objcopy -O binary "ARMLibTest.elf" "ARMLibTest.bin"
-	arm-none-eabi-size "ARMLibTest.elf"
+	arm-none-eabi-objcopy -O binary "ARMLibQ31Fir.elf" "ARMLibQ31Fir.bin"
+	arm-none-eabi-size "ARMLibQ31Fir.elf"
 	-@echo ' '
 
 .PHONY: all clean dependents
